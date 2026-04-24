@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION      = 'ap-south-1'
-        ECR_REGISTRY    = '137924571341.dkr.ecr.ap-south-1.amazonaws.com'
-        ECR_REPOSITORY  = 'devops-api-dev'
-        IMAGE_TAG       = "${BUILD_NUMBER}"
+        AWS_REGION     = 'ap-south-1'
+        ECR_REGISTRY   = '137924571341.dkr.ecr.ap-south-1.amazonaws.com'
+        ECR_REPOSITORY = 'devops-api-dev'
+        IMAGE_TAG      = "${BUILD_NUMBER}"
     }
 
     stages {
@@ -36,20 +36,17 @@ pipeline {
 
         stage('Push to ECR') {
             steps {
-                withAWS(credentials: 'aws-credentials', region: AWS_REGION) {
-                    sh """
-                        aws ecr get-login-password \
-                          --region ${AWS_REGION} | \
-                        docker login \
-                          --username AWS \
-                          --password-stdin \
-                          ${ECR_REGISTRY}
-                    """
-                    sh """
-                        docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
-                        docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
-                    """
-                }
+                sh """
+                    aws ecr get-login-password \
+                      --region ${AWS_REGION} | \
+                    docker login \
+                      --username AWS \
+                      --password-stdin \
+                      ${ECR_REGISTRY}
+
+                    docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+                    docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
+                """
             }
         }
 
