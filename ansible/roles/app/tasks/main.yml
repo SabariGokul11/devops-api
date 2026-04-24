@@ -1,0 +1,63 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes
+
+- name: Install required packages
+  apt:
+    name:
+      - curl
+      - wget
+      - git
+      - unzip
+    state: present
+  become: yes
+
+- name: Check Docker is running
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Authenticate Docker to ECR
+  shell: |
+    aws ecr get-login-password --region {{ aws_region }} | \
+    docker login \
+      --username AWS \
+      --password-stdin \
+      {{ ecr_registry }}
+  changed_when: false
+
+- name: Pull latest API image from ECR
+  shell: |
+    docker pull {{ ecr_registry }}/{{ ecr_repository }}:latest
+  register: pull_result
+
+- name: Stop existing container
+  shell: |
+    docker stop {{ app_name }} || true
+    docker rm {{ app_name }} || true
+  changed_when: false
+
+- name: Run API container
+  shell: |
+    docker run -d \
+      --name {{ app_name }} \
+      --restart unless-stopped \
+      -p {{ app_port }}:{{ app_port }} \
+      -e NODE_ENV={{ node_env }} \
+      -e APP_VERSION={{ app_version }} \
+      {{ ecr_registry }}/{{ ecr_repository }}:latest
+  register: run_result
+
+- name: Verify container is running
+  shell: docker ps | grep {{ app_name }}
+  register: verify_result
+  failed_when: verify_result.rc != 0
+
+- name: Show container status
+  debug:
+    msg: "Container {{ app_name }} is running successfully"

@@ -1,0 +1,19 @@
+---
+- name: Deploy DevOps API
+  hosts: devops_servers
+  gather_facts: yes
+
+  roles:
+    - app
+
+  post_tasks:
+    - name: Health check
+      uri:
+        url: "http://localhost:3000/health"
+        method: GET
+        status_code: 200
+      register: health_check
+
+    - name: Show health status
+      debug:
+        msg: "API Health: {{ health_check.json.status }}"
